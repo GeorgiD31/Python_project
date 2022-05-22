@@ -4,9 +4,10 @@ import sys
 import os
 import time
 
+# f checks which fruit has to spawn and stops the rest from spawning
+# chance determines which fruit spawns
 global score
 global chance
-# f checks which fruit has to spawn and stops the rest from spawning
 global f
 global game_over_check
 
@@ -32,7 +33,7 @@ class Snake:
             self.body.pop()
             self.body.insert(0, [self.body[0][0] + self.direction[0], self.body[0][1] + self.direction[1]])
 
-
+    # adds 1 more part to the length of the snake
     def add(self):
         self.body.insert(0, [self.body[0][0] + self.direction[0], self.body[0][1] + self.direction[1]])
 
@@ -73,7 +74,7 @@ class Fruit:
         pygame.draw.rect(screen, self.color, fruit)
 
 
-class SuperFruit(Fruit):
+class SpeedFruit(Fruit):
 
     def __init__(self):
         Fruit.__init__(self)
@@ -81,27 +82,25 @@ class SuperFruit(Fruit):
         self.color = (255, 100, 0)
         Fruit.draw(self)
 
+    # adds 2 to the length of the snake and speeds it up until it has eaten the next fruit and also gives +2 score
     def powerup(self):
         pygame.time.set_timer(Screen_Update, 70)
         snake.add()
 
 
-# Sets up the playing space
-grid_space_size = 25
-grid_spaces = 25
+class ShorteningFruit(Fruit):
 
-pygame.init()
-screen = pygame.display.set_mode((grid_space_size * grid_spaces, grid_space_size * grid_spaces))
+    def __init__(self):
+        Fruit.__init__(self)
+        self.score_given = 2
+        self.color = (100, 100, 255)
+        Fruit.draw(self)
 
-clock = pygame.time.Clock()
-
-apple = Fruit()
-apple2 = SuperFruit()
-snake = Snake()
-
-Screen_Update = pygame.USEREVENT
-pygame.time.set_timer(Screen_Update, 120)
-
+    # shortens the length of the snake and slows it down until it has eaten another fruit
+    def powerup(self):
+        if len(snake.body) > 2:
+            snake.body.pop()
+        pygame.time.set_timer(Screen_Update, 190)
 
 def collision_fruit():
     global score
@@ -139,6 +138,20 @@ def collision_fruit():
         apple2.powerup()
         snake.add()
 
+    if snake.body[0] == apple3.position and f == 2:
+
+        score += apple3.score_given
+        apple3.x = random.randint(0, grid_spaces - 1)
+        apple3.y = random.randint(0, grid_spaces - 1)
+        for part in snake.body:
+            if apple3.x == part[0] and apple3.y == part[1]:
+                apple3.x = random.randint(0, grid_spaces - 1)
+                apple3.y = random.randint(0, grid_spaces - 1)
+        apple3.position = [apple3.x, apple3.y]
+        chance = random.randint(0, 10)
+        apple3.powerup()
+
+
     return score
 
 
@@ -163,6 +176,9 @@ def game_over():
     apple2.x = random.randint(0, grid_spaces - 1)
     apple2.y = random.randint(0, grid_spaces - 1)
     apple2.position = [apple2.x, apple2.y]
+    apple3.x = random.randint(0, grid_spaces - 1)
+    apple3.y = random.randint(0, grid_spaces - 1)
+    apple3.position = [apple3.x, apple3.y]
     score = 0
     pygame.time.set_timer(Screen_Update, 120)
 
@@ -188,6 +204,7 @@ def load_game(file_number):
     if os.stat(file_path).st_size == 0:
         print('File is empty')
     else:
+        pygame.time.set_timer(Screen_Update, 120)
         i = 0
         with open("Snake_Saves.txt", "r") as file:
             snake.body = []
@@ -203,10 +220,7 @@ def load_game(file_number):
                 i += 2
             score = int(number_list[len(number_list)-3])
 
-
         file.close()
-
-
 
 
 def leaderboard():
@@ -224,19 +238,36 @@ def leaderboard():
             local_score = int(number_list[len(number_list)-3])
             score_list.append(local_score)
 
-        score_list.sort(reverse = True)
+        score_list.sort(reverse=True)
         # checks for the 10 highest scores and if there are less than 10 it displays all the scores in descending order
         if len(score_list) > 10:
             for i in range(0, 10):
-                print("Top score {0}: {1}".format((i + 1),score_list[i]))
+                print("Top score {0}: {1}".format((i + 1), score_list[i]))
         else:
             for i in range(0, len(score_list)):
-                print("Top score {0}: {1}".format((i + 1),score_list[i]))
+                print("Top score {0}: {1}".format((i + 1), score_list[i]))
+
+
+# Sets up the playing space
+grid_space_size = 25
+grid_spaces = 25
+
+pygame.init()
+screen = pygame.display.set_mode((grid_space_size * grid_spaces, grid_space_size * grid_spaces))
+
+clock = pygame.time.Clock()
+
+apple = Fruit()
+apple2 = SpeedFruit()
+apple3 = ShorteningFruit()
+snake = Snake()
+
+Screen_Update = pygame.USEREVENT
+pygame.time.set_timer(Screen_Update, 120)
 
 # The game will crash if the file is empty but has a \n added
 # The file must either be completely empty with only one single line in it or have something saved
 leaderboard()
-
 while True:
     row = 0
     pygame.display.set_caption('Snake')
@@ -256,15 +287,21 @@ while True:
 
     snake.draw()
 
-    if chance < 8:
+    if chance < 6:
         apple.draw()
         f = 0
-    else:
+    elif chance >= 6 and chance < 9:
         apple2.draw()
         f = 1
-
-
-
+    else:
+        apple3.draw()
+        f = 2
+    # Displays a message to tell the player to move if he has loaded a file
+    if snake.direction[0] == 0 and snake.direction[1] == 0:
+        font_resume_play = pygame.font.Font('freesansbold.ttf', 32)
+        text_resume_play = font_resume_play.render("Move to start playing", True, (255, 255, 255))
+        text_rect3 = text_resume_play.get_rect(center=((grid_space_size * grid_spaces) / 2,((grid_space_size * grid_spaces) / 2)))
+        screen.blit(text_resume_play, text_rect3)
 
     score_print()
     pygame.display.update()
@@ -281,7 +318,8 @@ while True:
 
             if event.type == pygame.KEYDOWN:
 
-                # Moves the snake in different directions
+                # MOVEMENT
+                # Moves the snake in different directions with the arrows
 
                 if event.key == pygame.K_UP:
                     if snake.body[1][1] != snake.body[0][1] - 1:
@@ -319,7 +357,7 @@ while True:
     else:
 
         while game_over_check:
-
+            #displays a message if the player has lost the game
             pygame.display.update()
             font_Game_over = pygame.font.Font('freesansbold.ttf', 32)
             font_resume = pygame.font.Font('freesansbold.ttf', 22)
@@ -343,7 +381,7 @@ while True:
                     if event.key == pygame.K_ESCAPE:
                         pygame.quit()
                         sys.exit()
-
+                    # resets the game
                     if event.key == pygame.K_SPACE:
                         game_over()
                         game_over_check = False
@@ -359,9 +397,3 @@ while True:
                         snake.direction = [0, 0]
                         load_game(file_number)
                         game_over_check = False
-
-
-
-
-
-
