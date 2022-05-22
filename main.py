@@ -200,6 +200,7 @@ def save_game():
 
 def load_game(file_number):
     global score
+    global game_over_check
     file_path = 'Snake_Saves.txt'
     if os.stat(file_path).st_size == 0:
         print('File is empty')
@@ -207,19 +208,22 @@ def load_game(file_number):
         pygame.time.set_timer(Screen_Update, 120)
         i = 0
         with open("Snake_Saves.txt", "r") as file:
-            snake.body = []
             lines = file.readlines()
-            if file_number != 0:
-                line = lines[int(file_number)-1]
+            if file_number <= len(lines):
+                game_over_check = False
+                snake.body = []
+                if file_number != 0 :
+                    line = lines[int(file_number)-1]
+                else:
+                    line = lines[int(file_number)]
+
+                number_list = line.split()
+                while i < (len(number_list) - 3):
+                    snake.body.append([int(number_list[i]), int(number_list[i + 1])])
+                    i += 2
+                score = int(number_list[len(number_list)-3])
             else:
-                line = lines[int(file_number)]
-
-            number_list = line.split()
-            while i < (len(number_list) - 3):
-                snake.body.append([int(number_list[i]), int(number_list[i + 1])])
-                i += 2
-            score = int(number_list[len(number_list)-3])
-
+                print("Wrong input no such save")
         file.close()
 
 
@@ -392,8 +396,11 @@ while True:
                         # The save will have to be loaded through the terminal by typing the number of which save you
                         # want to load
                         # You have to press a button to move after loading a file
-                        file_number = int(input("Enter number: "))
-                        time.sleep(5)
-                        snake.direction = [0, 0]
-                        load_game(file_number)
-                        game_over_check = False
+                        file_number = input("Enter number: ")
+                        if file_number.isdigit() == True:
+                            file_number = int(file_number)
+                            time.sleep(5)
+                            snake.direction = [0, 0]
+                            load_game(file_number)
+                        else:
+                            print("Wrong input, you need to enter only digits")
